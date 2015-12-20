@@ -1,4 +1,5 @@
 #include "application.h"
+#include "time.h"
 #include "main.h"
 
 void setup()
@@ -9,15 +10,22 @@ void setup()
 	pinMode(green_led, OUTPUT);
 	pinMode(blue_led, OUTPUT);
 	pinMode(main_led, OUTPUT);
+	pinMode(light_sensor_power, OUTPUT);
+	pinMode(light_sensor_read, INPUT);
+	pinMode(buzzer, OUTPUT);
 
 	// Web functions
-	Spark.function("ok", okToggle);
-	Spark.function("error", errorToggle);
-	Spark.function("alarm", alarmToggle);
-	Spark.function("download", downloadToggle);
-	Spark.function("upload", uploadToggle);
+	Particle.function("ok", okToggle);
+	Particle.function("error", errorToggle);
+	Particle.function("alarm", alarmToggle);
+	Particle.function("download", downloadToggle);
+	Particle.function("upload", uploadToggle);
+
+	// Fix time
+	Time.zone(1);
 
 	// Initial state
+	digitalWrite(light_sensor_power, HIGH);
 	resetState();
 }
 
@@ -28,6 +36,7 @@ void loop()
 	} else {
 		runNetwork();
 	}
+	checkBuzzer();
 }
 
 void runNetwork()
@@ -116,4 +125,33 @@ void resetState()
 	digitalWrite(green_led, LOW);
 	digitalWrite(blue_led, LOW);
 	digitalWrite(main_led, LOW);
+}
+
+void checkBuzzer()
+{
+	int hour, weekday;
+	bool light_on, buzzer_on;
+
+	hour = Time.hour();
+	weekday = Time.weekday();
+	light_on = analogRead(light_sensor_read) > 1000;
+	buzzer_on = pinReadFast(buzzer) == HIGH;
+
+	if (weekday > 0 && weekday < 6) {
+		if (!buzzer_on && hour >= 23 && light_on) {
+			digitalWrite(buzzer, HIGH);
+			buzzer_on = true;
+		} else if (buzzer_on && !light_on) {
+			digitalWrite(buzzer, LOW);
+			buzzer_on = false;
+		}
+	} else {
+		if (!buzzer_on && hour == 0 && light_on) {
+			digitalWrite(buzzer, HIGH);
+			buzzer_on = true;
+		} else if (buzzer_on && !light_on) {
+			digitalWrite(buzzer, LOW);
+			buzzer_on = false;
+		}
+	}
 }
