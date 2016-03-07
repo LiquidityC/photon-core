@@ -27,6 +27,8 @@ void setup()
 	// Initial state
 	digitalWrite(light_sensor_power, HIGH);
 	resetState();
+
+	Particle.publish("photon", "started", 60, PRIVATE);
 }
 
 void loop()
